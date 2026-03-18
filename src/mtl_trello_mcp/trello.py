@@ -33,6 +33,7 @@ def _request(method: str, endpoint: str, params: dict | None = None) -> dict | l
 
 # --- Boards ---
 
+
 def get_boards() -> list[dict]:
     """Get all boards for the authenticated user."""
     return _request("GET", "/members/me/boards", {"fields": "name,url,closed"})
@@ -44,6 +45,7 @@ def get_board(board_id: str) -> dict:
 
 
 # --- Lists ---
+
 
 def get_lists(board_id: str) -> list[dict]:
     """Get all open lists in a board."""
@@ -57,6 +59,7 @@ def create_list(board_id: str, name: str) -> dict:
 
 # --- Cards ---
 
+
 def get_cards(list_id: str) -> list[dict]:
     """Get all cards in a list."""
     return _request("GET", f"/lists/{list_id}/cards")
@@ -64,11 +67,15 @@ def get_cards(list_id: str) -> list[dict]:
 
 def get_card(card_id: str) -> dict:
     """Get a specific card with full details."""
-    return _request("GET", f"/cards/{card_id}", {
-        "fields": "name,desc,url,due,closed,idList,labels",
-        "members": "true",
-        "member_fields": "fullName,username",
-    })
+    return _request(
+        "GET",
+        f"/cards/{card_id}",
+        {
+            "fields": "name,desc,url,due,closed,idList,labels",
+            "members": "true",
+            "member_fields": "fullName,username",
+        },
+    )
 
 
 def create_card(
@@ -132,6 +139,7 @@ def delete_card(card_id: str) -> dict:
 
 # --- Labels ---
 
+
 def get_labels(board_id: str) -> list[dict]:
     """Get all labels for a board."""
     return _request("GET", f"/boards/{board_id}/labels")
@@ -139,9 +147,12 @@ def get_labels(board_id: str) -> list[dict]:
 
 # --- Members ---
 
+
 def get_board_members(board_id: str) -> list[dict]:
     """Get all members of a board."""
-    return _request("GET", f"/boards/{board_id}/members", {"fields": "fullName,username"})
+    return _request(
+        "GET", f"/boards/{board_id}/members", {"fields": "fullName,username"}
+    )
 
 
 def get_me() -> dict:
@@ -151,7 +162,10 @@ def get_me() -> dict:
 
 # --- Search ---
 
-def search_cards(query: str, board_id: str | None = None, max_results: int = 10) -> list[dict]:
+
+def search_cards(
+    query: str, board_id: str | None = None, max_results: int = 10
+) -> list[dict]:
     """Search for cards across boards."""
     params: dict = {"query": query, "modelTypes": "cards", "cards_limit": max_results}
     if board_id:

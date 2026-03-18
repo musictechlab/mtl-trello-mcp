@@ -30,7 +30,9 @@ def trello_list_boards() -> str:
 
     lines = [f"# Trello Boards ({len(open_boards)} open)\n"]
     for b in open_boards:
-        lines.append(f"- **{b['name']}**\n  ID: `{b['id']}`\n  URL: {b.get('url', 'N/A')}\n")
+        lines.append(
+            f"- **{b['name']}**\n  ID: `{b['id']}`\n  URL: {b.get('url', 'N/A')}\n"
+        )
     return "\n".join(lines)
 
 
@@ -56,7 +58,11 @@ def trello_get_board(board_id: str) -> str:
         if cards:
             for c in cards:
                 due = f" | Due: {c.get('due', '')[:10]}" if c.get("due") else ""
-                labels = ", ".join(l.get("name", "") for l in c.get("labels", []) if l.get("name"))
+                labels = ", ".join(
+                    lbl.get("name", "")
+                    for lbl in c.get("labels", [])
+                    if lbl.get("name")
+                )
                 label_str = f" | Labels: {labels}" if labels else ""
                 lines.append(f"- **{c['name']}**{due}{label_str}\n  ID: `{c['id']}`\n")
         else:
@@ -122,11 +128,15 @@ def trello_get_card(card_id: str) -> str:
     ]
 
     if members:
-        member_str = ", ".join(f"{m.get('fullName', '')} (@{m.get('username', '')})" for m in members)
+        member_str = ", ".join(
+            f"{m.get('fullName', '')} (@{m.get('username', '')})" for m in members
+        )
         lines.append(f"**Members:** {member_str}")
 
     if labels:
-        label_str = ", ".join(f"{l.get('name', 'unnamed')} ({l.get('color', '')})" for l in labels)
+        label_str = ", ".join(
+            f"{lbl.get('name', 'unnamed')} ({lbl.get('color', '')})" for lbl in labels
+        )
         lines.append(f"**Labels:** {label_str}")
 
     desc = card.get("desc", "")
@@ -233,9 +243,11 @@ def trello_get_labels(board_id: str) -> str:
         return "No labels found on this board."
 
     lines = [f"# Labels ({len(labels)})\n"]
-    for l in labels:
-        name = l.get("name", "") or "(unnamed)"
-        lines.append(f"- **{name}** ({l.get('color', 'no color')}) — ID: `{l['id']}`")
+    for lbl in labels:
+        name = lbl.get("name", "") or "(unnamed)"
+        lines.append(
+            f"- **{name}** ({lbl.get('color', 'no color')}) — ID: `{lbl['id']}`"
+        )
     return "\n".join(lines)
 
 
@@ -253,7 +265,9 @@ def trello_get_members(board_id: str) -> str:
 
     lines = [f"# Board Members ({len(members)})\n"]
     for m in members:
-        lines.append(f"- **{m.get('fullName', 'Unknown')}** (@{m.get('username', '')}) — ID: `{m['id']}`")
+        lines.append(
+            f"- **{m.get('fullName', 'Unknown')}** (@{m.get('username', '')}) — ID: `{m['id']}`"
+        )
     return "\n".join(lines)
 
 
@@ -275,15 +289,12 @@ def trello_search(query: str, board_id: str = "") -> str:
     if not cards:
         return f"No cards found for '{query}'."
 
-    lines = [f"# Search: \"{query}\" ({len(cards)} results)\n"]
+    lines = [f'# Search: "{query}" ({len(cards)} results)\n']
     for c in cards:
         board_name = c.get("board", {}).get("name", "")
         list_name = c.get("list", {}).get("name", "")
         context = f" | {board_name} → {list_name}" if board_name else ""
-        lines.append(
-            f"- **{c['name']}**{context}\n"
-            f"  ID: `{c['id']}`\n"
-        )
+        lines.append(f"- **{c['name']}**{context}\n" f"  ID: `{c['id']}`\n")
     return "\n".join(lines)
 
 
