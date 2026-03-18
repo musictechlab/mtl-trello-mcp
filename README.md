@@ -2,10 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI](https://github.com/musictechlab/mtl-trello-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/musictechlab/mtl-trello-mcp/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![Code style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://docs.astral.sh/ruff/)
 
 [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for [Trello](https://trello.com/) project management.
 
 Manage boards, lists, cards, labels, and members - all from Claude Code or any MCP-compatible client.
+
+![mtl-trello-mcp in action — translating Trello cards from Claude Code](docs/mtl-trello-mcp-demo.webp)
 
 ## Tools
 
