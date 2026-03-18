@@ -294,7 +294,7 @@ def trello_search(query: str, board_id: str = "") -> str:
         board_name = c.get("board", {}).get("name", "")
         list_name = c.get("list", {}).get("name", "")
         context = f" | {board_name} → {list_name}" if board_name else ""
-        lines.append(f"- **{c['name']}**{context}\n" f"  ID: `{c['id']}`\n")
+        lines.append(f"- **{c['name']}**{context}\n  ID: `{c['id']}`\n")
     return "\n".join(lines)
 
 
