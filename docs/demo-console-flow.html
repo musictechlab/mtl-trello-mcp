@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>mtl-trello-mcp demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .terminal {
+    width: 100%;
+    max-width: 900px;
+    background: #0d0d14;
+    padding: 0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 40px 0;
+  }
+
+  .titlebar {
+    background: #1c1c28;
+    padding: 10px 16px;
+    border-bottom: 1px solid #2a2a3a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .titlebar-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .titlebar-dot.red { background: #ff5f56; }
+  .titlebar-dot.yellow { background: #ffbd2e; }
+  .titlebar-dot.green { background: #27c93f; }
+
+  .titlebar-text {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 12px;
+    margin-left: 12px;
+  }
+
+  .content { padding: 24px 20px; }
+
+  .prompt-text {
+    color: #e0e0e0;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  .prompt-symbol { color: #7ec699; font-weight: 700; }
+
+  .section {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .section:last-child { border-bottom: none; }
+
+  .tool-header { font-size: 13px; margin-bottom: 2px; }
+
+  .tool-result {
+    padding-left: 20px;
+    font-size: 13px;
+    color: #9ca3af;
+  }
+
+  .green { color: #7ec699; }
+  .dim { color: rgba(255, 255, 255, 0.35); }
+  .gray { color: #9ca3af; }
+  .white { color: #e0e0e0; }
+  .bold { font-weight: 700; color: #ffffff; }
+
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  .dot.g { background: #7ec699; }
+  .dot.b { background: #6cb6ff; }
+
+  .arrow { color: rgba(255, 255, 255, 0.25); }
+
+  /* Claude-style markdown table */
+  .md-table {
+    margin: 10px 0 4px 20px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #e0e0e0;
+  }
+
+  .md-table-header {
+    display: flex;
+    color: #ffffff;
+    font-weight: 700;
+    padding-bottom: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    margin-bottom: 4px;
+  }
+
+  .md-table-row {
+    display: flex;
+    align-items: baseline;
+  }
+
+  .md-col-from {
+    min-width: 360px;
+    color: #e0e0e0;
+  }
+
+  .md-col-arrow {
+    color: rgba(255, 255, 255, 0.25);
+    margin: 0 12px;
+  }
+
+  .md-col-to {
+    color: #7ec699;
+  }
+
+  .summary {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #e0e0e0;
+    padding-left: 16px;
+  }
+
+  .cursor {
+    display: inline-block;
+    width: 8px;
+    height: 16px;
+    background: #7ec699;
+    animation: blink 1s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+  }
+
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+
+<div class="terminal">
+  <div class="titlebar">
+    <span class="titlebar-dot red"></span>
+    <span class="titlebar-dot yellow"></span>
+    <span class="titlebar-dot green"></span>
+    <span class="titlebar-text">claude — ~/projects/musicdata-lab</span>
+  </div>
+
+  <div class="content">
+
+    <!-- Prompt -->
+    <div class="prompt-text">
+      <span class="prompt-symbol">❯</span> translate all the tasks in this board https://trello.com/b/██████ (we'll send an invite to an English-speaking person)
+    </div>
+
+    <!-- Tool: get_board -->
+    <div class="section">
+      <div class="tool-header">
+        <span class="dot g"></span><span class="green">mtl-trello</span> <span class="dim">—</span> <span class="green">trello_get_board</span> <span class="gray">(MCP)</span>
+      </div>
+      <div class="tool-result">
+        <span class="arrow">└</span> Board "<span class="white">MusicData Lab — Sprint 12</span>" — 5 lists, 42 cards
+      </div>
+    </div>
+
+    <!-- Tool: update_card single -->
+    <div class="section">
+      <div class="tool-header">
+        <span class="dot g"></span><span class="green">mtl-trello</span> <span class="dim">—</span> <span class="green">trello_update_card</span> <span class="gray">(MCP)</span><span class="gray">(card_id: "████…", name: "Set up royalty data pipeline - 2h")</span>
+      </div>
+      <div class="tool-result">
+        <span class="arrow">└</span> Updated card <span class="bold">Set up royalty data pipeline - 2h</span>
+      </div>
+    </div>
+
+    <!-- Batch translations as table -->
+    <div class="section">
+      <div class="tool-header">
+        <span class="dot g"></span><span class="green">mtl-trello</span> <span class="dim">—</span> <span class="green">trello_update_card</span> <span class="gray">(MCP)</span> <span class="dim">× 34 more parallel calls…</span>
+      </div>
+
+      <div class="md-table">
+        <div class="md-table-header">
+          <span class="md-col-from">Original (PL)</span>
+          <span class="md-col-arrow"></span>
+          <span class="md-col-to">Translated (EN)</span>
+        </div>
+        <div class="md-table-row">
+          <span class="md-col-from">Konfiguracja pipeline'u royalties</span>
+          <span class="md-col-arrow">→</span>
+          <span class="md-col-to">Set up royalty data pipeline</span>
+        </div>
+        <div class="md-table-row">
+          <span class="md-col-from">Walidacja plików DDEX z labela</span>
+          <span class="md-col-arrow">→</span>
+          <span class="md-col-to">Validate DDEX files from label</span>
+        </div>
+        <div class="md-table-row">
+          <span class="md-col-from">Dashboard przychodów ze streamingu</span>
+          <span class="md-col-arrow">→</span>
+          <span class="md-col-to">Streaming revenue dashboard</span>
+        </div>
+        <div class="md-table-row">
+          <span class="md-col-from">Import metadanych z Spotify API</span>
+          <span class="md-col-arrow">→</span>
+          <span class="md-col-to">Import metadata from Spotify API</span>
+        </div>
+        <div class="md-table-row">
+          <span class="md-col-from">Raport rozliczeń dla dystrybutora</span>
+          <span class="md-col-arrow">→</span>
+          <span class="md-col-to">Settlement report for distributor</span>
+        </div>
+        <div class="md-table-row">
+          <span class="md-col-from">Eksport katalogu do formatu CSV</span>
+          <span class="md-col-arrow">→</span>
+          <span class="md-col-to">Export catalog to CSV format</span>
+        </div>
+        <div class="md-table-row">
+          <span class="dim">…and 28 more translations</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="section">
+      <div class="summary">
+        <span class="dot b"></span>All done. Translated <span class="bold">35 cards</span> from Polish to English across
+        all 5 lists. Cards already in English were left unchanged.
+        <br><br>
+        The board is now ready for your English-speaking collaborator.
+        <br><br>
+        <span class="dim">✱ Worked for 1m 37s</span>
+      </div>
+    </div>
+
+    <!-- New prompt -->
+    <div class="prompt-text" style="margin-bottom: 0;">
+      <span class="prompt-symbol">❯</span><span class="cursor"></span>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

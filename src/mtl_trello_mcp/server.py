@@ -227,6 +227,20 @@ def trello_archive_card(card_id: str) -> str:
     return f"Archived card **{card.get('name', 'Unknown')}** (ID: `{card_id}`)"
 
 
+@mcp.tool()
+def trello_assign_card(card_id: str, member_ids: str) -> str:
+    """Assign members to a Trello card.
+
+    Args:
+        card_id: Trello card ID
+        member_ids: Comma-separated member IDs to assign (from trello_get_members)
+    """
+    card = trello.update_card(card_id=card_id, member_ids=member_ids)
+    return (
+        f"Assigned members to card **{card.get('name', 'Unknown')}** (ID: `{card_id}`)"
+    )
+
+
 # --- Labels & Members ---
 
 

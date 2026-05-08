@@ -106,6 +106,7 @@ def update_card(
     list_id: str | None = None,
     due: str | None = None,
     closed: bool | None = None,
+    member_ids: str | None = None,
 ) -> dict:
     """Update a card."""
     params: dict = {}
@@ -119,6 +120,8 @@ def update_card(
         params["due"] = due
     if closed is not None:
         params["closed"] = str(closed).lower()
+    if member_ids is not None:
+        params["idMembers"] = member_ids
     return _request("PUT", f"/cards/{card_id}", params)
 
 
