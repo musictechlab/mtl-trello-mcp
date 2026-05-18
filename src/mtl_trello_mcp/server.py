@@ -228,6 +228,30 @@ def trello_archive_card(card_id: str) -> str:
 
 
 @mcp.tool()
+def trello_get_comments(card_id: str, limit: int = 50) -> str:
+    """Get comments on a Trello card, newest first.
+
+    Args:
+        card_id: Trello card ID
+        limit: Max number of comments to return (default 50, max 1000)
+    """
+    actions = trello.get_card_comments(card_id, limit=limit)
+
+    if not actions:
+        return f"No comments on card `{card_id}`."
+
+    lines = [f"# Comments on `{card_id}` ({len(actions)})\n"]
+    for a in actions:
+        data = a.get("data", {})
+        member = a.get("memberCreator", {})
+        author = f"{member.get('fullName', '')} (@{member.get('username', '')})".strip()
+        when = a.get("date", "")[:19].replace("T", " ")
+        text = data.get("text", "")
+        lines.append(f"## {author} — {when}\n\n{text}\n")
+    return "\n".join(lines)
+
+
+@mcp.tool()
 def trello_assign_card(card_id: str, member_ids: str) -> str:
     """Assign members to a Trello card.
 

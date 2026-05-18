@@ -140,6 +140,15 @@ def delete_card(card_id: str) -> dict:
     return _request("DELETE", f"/cards/{card_id}")
 
 
+def get_card_comments(card_id: str, limit: int = 50) -> list[dict]:
+    """Get comments on a card, newest first."""
+    return _request(
+        "GET",
+        f"/cards/{card_id}/actions",
+        {"filter": "commentCard", "limit": limit},
+    )
+
+
 # --- Labels ---
 
 

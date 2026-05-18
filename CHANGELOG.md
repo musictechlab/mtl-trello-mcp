@@ -21,3 +21,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `trello_search` — search cards by keyword
 - `trello_get_labels` — get board labels
 - `trello_get_members` — get board members
+- `trello_get_comments` — read comments on a card, newest first
