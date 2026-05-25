@@ -186,20 +186,25 @@ def trello_update_card(
     name: str = "",
     desc: str = "",
     due: str = "",
+    label_ids: str = "",
 ) -> str:
-    """Update a Trello card's name, description, or due date.
+    """Update a Trello card's name, description, due date, or labels.
 
     Args:
         card_id: Trello card ID
         name: New card title (leave empty to keep current)
         desc: New description (leave empty to keep current)
         due: New due date in ISO format (leave empty to keep current)
+        label_ids: Comma-separated label IDs — REPLACES the card's full label set.
+            Use trello_add_label_to_card / trello_remove_label_from_card for
+            incremental changes. Leave empty to keep current labels.
     """
     card = trello.update_card(
         card_id=card_id,
         name=name or None,
         desc=desc or None,
         due=due or None,
+        label_ids=label_ids if label_ids else None,
     )
     return f"Updated card **{card.get('name', 'Unknown')}** (ID: `{card_id}`)"
 
@@ -287,6 +292,62 @@ def trello_get_labels(board_id: str) -> str:
             f"- **{name}** ({lbl.get('color', 'no color')}) — ID: `{lbl['id']}`"
         )
     return "\n".join(lines)
+
+
+@mcp.tool()
+def trello_create_label(board_id: str, name: str, color: str = "") -> str:
+    """Create a new label on a Trello board.
+
+    Args:
+        board_id: Trello board ID
+        name: Label name
+        color: One of yellow, purple, blue, red, green, orange, black, sky, pink, lime.
+            Leave empty for a "no color" label.
+    """
+    label = trello.create_label(board_id, name, color or None)
+    return f"Created label **{label.get('name')}** ({label.get('color') or 'no color'}) — ID: `{label.get('id')}`"
+
+
+@mcp.tool()
+def trello_update_label(label_id: str, name: str = "", color: str = "") -> str:
+    """Rename or recolor an existing Trello label.
+
+    Args:
+        label_id: Trello label ID
+        name: New label name (leave empty to keep current)
+        color: New color — yellow, purple, blue, red, green, orange, black, sky, pink, lime.
+            Leave empty to keep current.
+    """
+    label = trello.update_label(
+        label_id,
+        name=name or None,
+        color=color or None,
+    )
+    return f"Updated label **{label.get('name')}** ({label.get('color') or 'no color'}) — ID: `{label.get('id')}`"
+
+
+@mcp.tool()
+def trello_add_label_to_card(card_id: str, label_id: str) -> str:
+    """Attach a single label to a Trello card without affecting other labels.
+
+    Args:
+        card_id: Trello card ID
+        label_id: Trello label ID (from trello_get_labels)
+    """
+    trello.add_label_to_card(card_id, label_id)
+    return f"Added label `{label_id}` to card `{card_id}`"
+
+
+@mcp.tool()
+def trello_remove_label_from_card(card_id: str, label_id: str) -> str:
+    """Detach a single label from a Trello card.
+
+    Args:
+        card_id: Trello card ID
+        label_id: Trello label ID
+    """
+    trello.remove_label_from_card(card_id, label_id)
+    return f"Removed label `{label_id}` from card `{card_id}`"
 
 
 @mcp.tool()
