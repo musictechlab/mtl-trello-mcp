@@ -4,6 +4,7 @@
 [![CI](https://github.com/musictechlab/mtl-trello-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/musictechlab/mtl-trello-mcp/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![Code style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://docs.astral.sh/ruff/)
+[![Built by MusicTech Lab](https://musictechlab.io/oss/build-by-musictechlab.io.svg)](https://musictechlab.io)
 
 [Model Context Protocol](https://modelcontextprotocol.io/) (MCP) server for [Trello](https://trello.com/) project management.
 
