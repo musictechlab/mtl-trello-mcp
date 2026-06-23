@@ -1,5 +1,6 @@
 """MCP server exposing Trello tools for Claude Code."""
 
+import fnmatch
 import mimetypes
 import os
 
@@ -15,15 +16,43 @@ mcp = FastMCP(
     instructions="Trello project management for Claude Code — boards, lists, cards, search",
 )
 
+# Filename globs that must never be uploaded, even from inside the allowed root.
+# These are the usual homes of credentials and private keys.
+_SENSITIVE_GLOBS = (
+    "*.pem",
+    "*.key",
+    "*.env",
+    ".env",
+    "*.p12",
+    "*.pfx",
+    "id_rsa",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
+    ".netrc",
+    "credentials",
+)
+# Hard cap on upload size (overridable via TRELLO_MAX_UPLOAD_MB).
+_DEFAULT_MAX_UPLOAD_MB = 50
+
 
 def _resolve_upload_path(file_path: str) -> str:
     """Resolve and validate a local file path before uploading it to Trello.
 
     Guards the attachment tools against arbitrary local-file reads — e.g. a
-    prompt-injected path like `~/.ssh/id_rsa` pointed at a card an attacker can
-    read. Uploads are confined to an allowed root (defaults to the user's home
-    directory; narrow it with the TRELLO_UPLOAD_DIR env var) and must be a
-    regular file. Symlinks are resolved first so they can't escape the root.
+    prompt-injected path pointed at a card an attacker can read. Layered checks:
+
+    - Confine to an allowed root: TRELLO_UPLOAD_DIR if set, else the user's home
+      directory. Symlinks are resolved first so they can't escape the root.
+    - Must be a regular file (no directories, devices, or missing paths).
+    - Reject any hidden path component (a part starting with `.`, such as
+      `.ssh`, `.aws`, `.config`, `.env`). Secrets overwhelmingly live in
+      dotfiles/dotdirs; legitimate attachments essentially never do. This is
+      what actually blocks `~/.ssh/id_rsa` under the default home root. Set
+      TRELLO_ALLOW_HIDDEN=1 to opt out.
+    - Reject sensitive filename patterns (keys, certs, *.env) even when not
+      hidden — see `_SENSITIVE_GLOBS`.
+    - Enforce a size cap (TRELLO_MAX_UPLOAD_MB, default 50 MB).
     """
     base = os.path.realpath(
         os.environ.get("TRELLO_UPLOAD_DIR") or os.path.expanduser("~")
@@ -33,6 +62,30 @@ def _resolve_upload_path(file_path: str) -> str:
         raise ValueError(f"file_path must be within {base}")
     if not os.path.isfile(resolved):
         raise ValueError(f"file_path is not a regular file: {resolved}")
+
+    if os.environ.get("TRELLO_ALLOW_HIDDEN") != "1":
+        rel = os.path.relpath(resolved, base)
+        for part in rel.split(os.sep):
+            if part.startswith("."):
+                raise ValueError(
+                    f"refusing hidden path component '{part}' "
+                    "(set TRELLO_ALLOW_HIDDEN=1 to override)"
+                )
+
+    name = os.path.basename(resolved).lower()
+    if any(fnmatch.fnmatch(name, glob) for glob in _SENSITIVE_GLOBS):
+        raise ValueError(
+            f"refusing to upload sensitive file: {os.path.basename(resolved)}"
+        )
+
+    try:
+        max_mb = int(os.environ.get("TRELLO_MAX_UPLOAD_MB", _DEFAULT_MAX_UPLOAD_MB))
+    except ValueError:
+        max_mb = _DEFAULT_MAX_UPLOAD_MB
+    size = os.path.getsize(resolved)
+    if size > max_mb * 1024 * 1024:
+        raise ValueError(f"file too large: {size} bytes exceeds {max_mb} MB limit")
+
     return resolved
 
 

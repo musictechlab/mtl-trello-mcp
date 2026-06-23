@@ -74,6 +74,52 @@ def test_resolve_upload_path_rejects_non_file(tmp_path, monkeypatch):
         server._resolve_upload_path(str(tmp_path))
 
 
+def test_resolve_upload_path_rejects_hidden_component(tmp_path, monkeypatch):
+    """A file inside a dotdir (e.g. ~/.ssh/id_rsa) is rejected by default."""
+    monkeypatch.setenv("TRELLO_UPLOAD_DIR", str(tmp_path))
+    monkeypatch.delenv("TRELLO_ALLOW_HIDDEN", raising=False)
+    ssh = tmp_path / ".ssh"
+    ssh.mkdir()
+    key = ssh / "config_note.txt"  # ordinary name; the .ssh component is the trigger
+    key.write_text("data")
+
+    with pytest.raises(ValueError, match="hidden path component"):
+        server._resolve_upload_path(str(key))
+
+
+def test_resolve_upload_path_allows_hidden_when_opted_in(tmp_path, monkeypatch):
+    """TRELLO_ALLOW_HIDDEN=1 lifts the hidden-component restriction."""
+    monkeypatch.setenv("TRELLO_UPLOAD_DIR", str(tmp_path))
+    monkeypatch.setenv("TRELLO_ALLOW_HIDDEN", "1")
+    hidden_dir = tmp_path / ".config"
+    hidden_dir.mkdir()
+    f = hidden_dir / "note.txt"
+    f.write_text("data")
+
+    assert server._resolve_upload_path(str(f)) == str(f.resolve())
+
+
+def test_resolve_upload_path_rejects_sensitive_name(tmp_path, monkeypatch):
+    """A sensitive filename pattern is rejected even when not hidden."""
+    monkeypatch.setenv("TRELLO_UPLOAD_DIR", str(tmp_path))
+    cert = tmp_path / "server.pem"
+    cert.write_text("-----BEGIN CERTIFICATE-----")
+
+    with pytest.raises(ValueError, match="sensitive file"):
+        server._resolve_upload_path(str(cert))
+
+
+def test_resolve_upload_path_rejects_oversized(tmp_path, monkeypatch):
+    """A file above the size cap is rejected."""
+    monkeypatch.setenv("TRELLO_UPLOAD_DIR", str(tmp_path))
+    monkeypatch.setenv("TRELLO_MAX_UPLOAD_MB", "1")
+    big = tmp_path / "big.png"
+    big.write_bytes(b"\x00" * (2 * 1024 * 1024))
+
+    with pytest.raises(ValueError, match="too large"):
+        server._resolve_upload_path(str(big))
+
+
 @patch("mtl_trello_mcp.trello._request")
 def test_add_comment(mock_request):
     """add_comment POSTs the text to the card's comment-actions endpoint."""
