@@ -32,3 +32,4 @@ MCP server for Trello project management.
 |----------|---------|----------|
 | `TRELLO_API_KEY` | Trello Power-Up API key | Yes |
 | `TRELLO_TOKEN` | Trello API token | Yes |
+| `TRELLO_UPLOAD_DIR` | Allowed root for attachment uploads (defaults to `~`) | No |

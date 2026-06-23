@@ -152,6 +152,39 @@ def get_card_comments(card_id: str, limit: int = 50) -> list[dict]:
     )
 
 
+def add_comment(card_id: str, text: str) -> dict:
+    """Add a comment to a card."""
+    return _request("POST", f"/cards/{card_id}/actions/comments", {"text": text})
+
+
+# --- Attachments ---
+
+
+def add_attachment(card_id: str, file_path: str, name: str | None = None) -> dict:
+    """Attach a local file to a card via multipart upload.
+
+    The shared _request() helper only sends query params, so file uploads need
+    their own multipart POST.
+    """
+    url = f"{BASE_URL}/cards/{card_id}/attachments"
+    params = dict(_auth_params())
+    if name:
+        params["name"] = name
+    with open(file_path, "rb") as fh:
+        files = {"file": (name or os.path.basename(file_path), fh)}
+        resp = httpx.post(url, params=params, files=files, timeout=30)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def attach_link(card_id: str, link_url: str, name: str | None = None) -> dict:
+    """Attach a URL (not a file) to a card."""
+    params: dict = {"url": link_url}
+    if name:
+        params["name"] = name
+    return _request("POST", f"/cards/{card_id}/attachments", params)
+
+
 # --- Labels ---
 
 
