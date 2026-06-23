@@ -25,6 +25,11 @@ Manage boards, lists, cards, labels, and members - all from Claude Code or any M
 | `trello_update_card` | Update card name, description, due date |
 | `trello_move_card` | Move card to a different list |
 | `trello_archive_card` | Archive a card |
+| `trello_add_attachment` | Attach a local file (image, PDF, …) to a card |
+| `trello_attach_link` | Attach a URL (web link) to a card |
+| `trello_get_comments` | Get comments on a card |
+| `trello_add_comment` | Add a comment to a card |
+| `trello_comment_with_attachment` | Upload a file and post a comment embedding/linking it |
 | `trello_search` | Search cards by keyword |
 | `trello_get_labels` | Get board labels |
 | `trello_get_members` | Get board members |
@@ -42,6 +47,13 @@ Manage boards, lists, cards, labels, and members - all from Claude Code or any M
 cp .env.example .env
 # Edit .env with your TRELLO_API_KEY and TRELLO_TOKEN
 ```
+
+Optional: set `TRELLO_UPLOAD_DIR` to confine the attachment tools
+(`trello_add_attachment`, `trello_comment_with_attachment`) to a specific
+folder. Uploads outside this root are rejected — a guard against a
+prompt-injected path leaking a sensitive local file onto a card. Defaults to
+your home directory; point it at a dedicated staging folder for stricter
+isolation.
 
 ### 3. Install dependencies
 

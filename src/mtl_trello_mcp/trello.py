@@ -107,6 +107,7 @@ def update_card(
     due: str | None = None,
     closed: bool | None = None,
     member_ids: str | None = None,
+    label_ids: str | None = None,
 ) -> dict:
     """Update a card."""
     params: dict = {}
@@ -122,6 +123,8 @@ def update_card(
         params["closed"] = str(closed).lower()
     if member_ids is not None:
         params["idMembers"] = member_ids
+    if label_ids is not None:
+        params["idLabels"] = label_ids
     return _request("PUT", f"/cards/{card_id}", params)
 
 
@@ -149,12 +152,75 @@ def get_card_comments(card_id: str, limit: int = 50) -> list[dict]:
     )
 
 
+def add_comment(card_id: str, text: str) -> dict:
+    """Add a comment to a card."""
+    return _request("POST", f"/cards/{card_id}/actions/comments", {"text": text})
+
+
+# --- Attachments ---
+
+
+def add_attachment(card_id: str, file_path: str, name: str | None = None) -> dict:
+    """Attach a local file to a card via multipart upload.
+
+    The shared _request() helper only sends query params, so file uploads need
+    their own multipart POST.
+    """
+    url = f"{BASE_URL}/cards/{card_id}/attachments"
+    params = dict(_auth_params())
+    if name:
+        params["name"] = name
+    with open(file_path, "rb") as fh:
+        files = {"file": (name or os.path.basename(file_path), fh)}
+        resp = httpx.post(url, params=params, files=files, timeout=30)
+    resp.raise_for_status()
+    return resp.json()
+
+
+def attach_link(card_id: str, link_url: str, name: str | None = None) -> dict:
+    """Attach a URL (not a file) to a card."""
+    params: dict = {"url": link_url}
+    if name:
+        params["name"] = name
+    return _request("POST", f"/cards/{card_id}/attachments", params)
+
+
 # --- Labels ---
 
 
 def get_labels(board_id: str) -> list[dict]:
     """Get all labels for a board."""
     return _request("GET", f"/boards/{board_id}/labels")
+
+
+def create_label(board_id: str, name: str, color: str | None = None) -> dict:
+    """Create a new label on a board. color is one of: yellow, purple, blue, red, green, orange, black, sky, pink, lime, or None."""
+    params: dict = {"name": name, "idBoard": board_id}
+    if color:
+        params["color"] = color
+    return _request("POST", "/labels", params)
+
+
+def update_label(
+    label_id: str, name: str | None = None, color: str | None = None
+) -> dict:
+    """Rename or recolor an existing label."""
+    params: dict = {}
+    if name is not None:
+        params["name"] = name
+    if color is not None:
+        params["color"] = color
+    return _request("PUT", f"/labels/{label_id}", params)
+
+
+def add_label_to_card(card_id: str, label_id: str) -> dict | list:
+    """Attach a single label to a card without affecting other labels."""
+    return _request("POST", f"/cards/{card_id}/idLabels", {"value": label_id})
+
+
+def remove_label_from_card(card_id: str, label_id: str) -> dict | list:
+    """Detach a single label from a card."""
+    return _request("DELETE", f"/cards/{card_id}/idLabels/{label_id}")
 
 
 # --- Members ---

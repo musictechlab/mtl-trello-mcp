@@ -1,5 +1,8 @@
 """MCP server exposing Trello tools for Claude Code."""
 
+import mimetypes
+import os
+
 from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
 
@@ -11,6 +14,26 @@ mcp = FastMCP(
     "mtl-trello",
     instructions="Trello project management for Claude Code — boards, lists, cards, search",
 )
+
+
+def _resolve_upload_path(file_path: str) -> str:
+    """Resolve and validate a local file path before uploading it to Trello.
+
+    Guards the attachment tools against arbitrary local-file reads — e.g. a
+    prompt-injected path like `~/.ssh/id_rsa` pointed at a card an attacker can
+    read. Uploads are confined to an allowed root (defaults to the user's home
+    directory; narrow it with the TRELLO_UPLOAD_DIR env var) and must be a
+    regular file. Symlinks are resolved first so they can't escape the root.
+    """
+    base = os.path.realpath(
+        os.environ.get("TRELLO_UPLOAD_DIR") or os.path.expanduser("~")
+    )
+    resolved = os.path.realpath(file_path)
+    if resolved != base and not resolved.startswith(base + os.sep):
+        raise ValueError(f"file_path must be within {base}")
+    if not os.path.isfile(resolved):
+        raise ValueError(f"file_path is not a regular file: {resolved}")
+    return resolved
 
 
 # --- Board tools ---
@@ -186,20 +209,25 @@ def trello_update_card(
     name: str = "",
     desc: str = "",
     due: str = "",
+    label_ids: str = "",
 ) -> str:
-    """Update a Trello card's name, description, or due date.
+    """Update a Trello card's name, description, due date, or labels.
 
     Args:
         card_id: Trello card ID
         name: New card title (leave empty to keep current)
         desc: New description (leave empty to keep current)
         due: New due date in ISO format (leave empty to keep current)
+        label_ids: Comma-separated label IDs — REPLACES the card's full label set.
+            Use trello_add_label_to_card / trello_remove_label_from_card for
+            incremental changes. Leave empty to keep current labels.
     """
     card = trello.update_card(
         card_id=card_id,
         name=name or None,
         desc=desc or None,
         due=due or None,
+        label_ids=label_ids if label_ids else None,
     )
     return f"Updated card **{card.get('name', 'Unknown')}** (ID: `{card_id}`)"
 
@@ -228,6 +256,39 @@ def trello_archive_card(card_id: str) -> str:
 
 
 @mcp.tool()
+def trello_add_attachment(card_id: str, file_path: str, name: str = "") -> str:
+    """Attach a local file (image, PDF, etc.) to a Trello card.
+
+    Args:
+        card_id: Trello card ID
+        file_path: Absolute path to the local file to upload
+        name: Optional display name for the attachment (defaults to the filename)
+    """
+    safe_path = _resolve_upload_path(file_path)
+    att = trello.add_attachment(card_id, safe_path, name or None)
+    return (
+        f"Attached **{att.get('name', file_path)}** to card `{card_id}`\n"
+        f"URL: {att.get('url', 'N/A')}"
+    )
+
+
+@mcp.tool()
+def trello_attach_link(card_id: str, url: str, name: str = "") -> str:
+    """Attach a URL (web link) to a Trello card.
+
+    Args:
+        card_id: Trello card ID
+        url: The URL to attach
+        name: Optional display name for the link (defaults to the URL)
+    """
+    att = trello.attach_link(card_id, url, name or None)
+    return (
+        f"Attached link **{att.get('name', url)}** to card `{card_id}`\n"
+        f"URL: {att.get('url', url)}"
+    )
+
+
+@mcp.tool()
 def trello_get_comments(card_id: str, limit: int = 50) -> str:
     """Get comments on a Trello card, newest first.
 
@@ -249,6 +310,56 @@ def trello_get_comments(card_id: str, limit: int = 50) -> str:
         text = data.get("text", "")
         lines.append(f"## {author} — {when}\n\n{text}\n")
     return "\n".join(lines)
+
+
+@mcp.tool()
+def trello_add_comment(card_id: str, text: str) -> str:
+    """Add a comment to a Trello card.
+
+    Args:
+        card_id: Trello card ID
+        text: Comment body (supports Markdown)
+    """
+    action = trello.add_comment(card_id, text)
+    member = action.get("memberCreator", {})
+    author = f"{member.get('fullName', '')} (@{member.get('username', '')})".strip()
+    return f"Added comment to card `{card_id}`" + (
+        f" as {author}" if author != "(@)" else ""
+    )
+
+
+@mcp.tool()
+def trello_comment_with_attachment(
+    card_id: str, file_path: str, text: str = "", name: str = ""
+) -> str:
+    """Add a comment to a Trello card with a local file attached to it.
+
+    Trello has no native file-on-comment concept — attachments belong to the
+    card. This uploads the file as a card attachment, then posts a comment that
+    embeds it (images render inline) or links it (other file types).
+
+    Args:
+        card_id: Trello card ID
+        file_path: Absolute path to the local file to upload
+        text: Optional comment body to prepend above the attachment (Markdown)
+        name: Optional display name for the attachment (defaults to the filename)
+    """
+    safe_path = _resolve_upload_path(file_path)
+    att = trello.add_attachment(card_id, safe_path, name or None)
+    att_url = att.get("url", "")
+    att_name = att.get("name") or name or os.path.basename(safe_path)
+
+    mime = att.get("mimeType") or mimetypes.guess_type(safe_path)[0] or ""
+    is_image = mime.startswith("image/")
+    embed = f"![{att_name}]({att_url})" if is_image else f"[{att_name}]({att_url})"
+    body = f"{text}\n\n{embed}" if text else embed
+
+    trello.add_comment(card_id, body)
+    kind = "image" if is_image else "file"
+    return (
+        f"Posted comment with {kind} attachment **{att_name}** on card `{card_id}`\n"
+        f"URL: {att_url or 'N/A'}"
+    )
 
 
 @mcp.tool()
@@ -287,6 +398,62 @@ def trello_get_labels(board_id: str) -> str:
             f"- **{name}** ({lbl.get('color', 'no color')}) — ID: `{lbl['id']}`"
         )
     return "\n".join(lines)
+
+
+@mcp.tool()
+def trello_create_label(board_id: str, name: str, color: str = "") -> str:
+    """Create a new label on a Trello board.
+
+    Args:
+        board_id: Trello board ID
+        name: Label name
+        color: One of yellow, purple, blue, red, green, orange, black, sky, pink, lime.
+            Leave empty for a "no color" label.
+    """
+    label = trello.create_label(board_id, name, color or None)
+    return f"Created label **{label.get('name')}** ({label.get('color') or 'no color'}) — ID: `{label.get('id')}`"
+
+
+@mcp.tool()
+def trello_update_label(label_id: str, name: str = "", color: str = "") -> str:
+    """Rename or recolor an existing Trello label.
+
+    Args:
+        label_id: Trello label ID
+        name: New label name (leave empty to keep current)
+        color: New color — yellow, purple, blue, red, green, orange, black, sky, pink, lime.
+            Leave empty to keep current.
+    """
+    label = trello.update_label(
+        label_id,
+        name=name or None,
+        color=color or None,
+    )
+    return f"Updated label **{label.get('name')}** ({label.get('color') or 'no color'}) — ID: `{label.get('id')}`"
+
+
+@mcp.tool()
+def trello_add_label_to_card(card_id: str, label_id: str) -> str:
+    """Attach a single label to a Trello card without affecting other labels.
+
+    Args:
+        card_id: Trello card ID
+        label_id: Trello label ID (from trello_get_labels)
+    """
+    trello.add_label_to_card(card_id, label_id)
+    return f"Added label `{label_id}` to card `{card_id}`"
+
+
+@mcp.tool()
+def trello_remove_label_from_card(card_id: str, label_id: str) -> str:
+    """Detach a single label from a Trello card.
+
+    Args:
+        card_id: Trello card ID
+        label_id: Trello label ID
+    """
+    trello.remove_label_from_card(card_id, label_id)
+    return f"Removed label `{label_id}` from card `{card_id}`"
 
 
 @mcp.tool()
