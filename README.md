@@ -48,12 +48,19 @@ cp .env.example .env
 # Edit .env with your TRELLO_API_KEY and TRELLO_TOKEN
 ```
 
-Optional: set `TRELLO_UPLOAD_DIR` to confine the attachment tools
-(`trello_add_attachment`, `trello_comment_with_attachment`) to a specific
-folder. Uploads outside this root are rejected — a guard against a
-prompt-injected path leaking a sensitive local file onto a card. Defaults to
-your home directory; point it at a dedicated staging folder for stricter
-isolation.
+**Attachment upload safety.** The attachment tools (`trello_add_attachment`,
+`trello_comment_with_attachment`) validate every local path before uploading,
+to stop a prompt-injected path from leaking a sensitive file onto a card:
+
+| Var | Default | Effect |
+|-----|---------|--------|
+| `TRELLO_UPLOAD_DIR` | `~` | Uploads must resolve to a regular file inside this root (symlinks resolved first). |
+| `TRELLO_ALLOW_HIDDEN` | unset | When not `1`, any hidden path component (`.ssh`, `.aws`, `.config`, `.env`, …) is rejected — this is what blocks `~/.ssh/id_rsa` under the default home root. |
+| `TRELLO_MAX_UPLOAD_MB` | `50` | Maximum upload size in MB. |
+
+Sensitive filename patterns (`*.pem`, `*.key`, `*.env`, `id_rsa`, `.netrc`, …)
+are rejected regardless. For the strictest setup, point `TRELLO_UPLOAD_DIR` at
+a dedicated staging folder that contains nothing else.
 
 ### 3. Install dependencies
 
